@@ -1,12 +1,13 @@
-# requirements-minimal.txt (rename ke requirements.txt)
+# requirements-streamlit.txt
 streamlit==1.28.0
 torch==2.0.0
+torchvision==0.15.1
+torchaudio==2.0.1
 faster-whisper==0.10.0
 sentence-transformers==2.2.2
 librosa==0.10.0.post2
 soundfile==0.12.1
-noisereduce==2.0.1
 numpy==1.24.3
 pandas==2.0.3
-spellchecker==0.7.1
 Pillow==10.1.0
+spellchecker==0.7.1
