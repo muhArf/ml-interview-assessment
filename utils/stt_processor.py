@@ -14,8 +14,8 @@ from pydub import AudioSegment
 
 # Konfigurasi
 WHISPER_MODEL_NAME = "small" 
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-COMPUTE_TYPE = "float16" if DEVICE == "cuda" else "int8"
+DEVICE = "cpu"
+COMPUTE_TYPE = "int8"
 SR_RATE = 16000 
 
 # Daftar istilah ML/AI
@@ -148,3 +148,38 @@ def transcribe_and_clean(audio_path, whisper_model, spell_checker, english_words
         return cleaned_text
     except Exception as e:
         raise RuntimeError(f"Transcription error: {e}")
+
+# ==== TAMBAHKAN DI SINI ====
+def process_audio_for_streamlit(uploaded_file, temp_dir):
+    """Optimized audio processing for Streamlit Cloud"""
+    try:
+        # Simpan file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        file_ext = uploaded_file.name.split('.')[-1]
+        
+        # Batasi format
+        if file_ext.lower() not in ['mp3', 'wav', 'm4a']:
+            # Convert ke wav jika format tidak support
+            file_ext = 'wav'
+            
+        filename = f"response_{timestamp}.{file_ext}"
+        file_path = temp_dir / filename
+        
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        
+        # Batasi durasi (max 3 menit)
+        import librosa
+        y, sr = librosa.load(file_path, sr=16000)
+        duration = len(y) / sr
+        
+        if duration > 180:  # 3 menit
+            # Potong audio
+            y = y[:180 * sr]  # Ambil 3 menit pertama
+            import soundfile as sf
+            sf.write(file_path, y, sr)
+        
+        return file_path
+        
+    except Exception as e:
+        raise RuntimeError(f"Audio processing error: {str(e)}")

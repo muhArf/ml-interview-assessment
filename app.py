@@ -7,6 +7,33 @@ import sys
 import tempfile
 from pathlib import Path
 import time
+import sys
+import traceback
+
+def handle_exception(e):
+    """Custom exception handler"""
+    error_msg = f"""
+    ⚠️ **Application Error**
+    
+    **Error Type:** {type(e).__name__}
+    **Error Message:** {str(e)}
+    
+    *Please try refreshing the page or starting a new interview.*
+    """
+    
+    st.error(error_msg)
+    
+    # Tombol untuk reset
+    if st.button("🔄 Restart Application"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
+    
+    # Debug info (hanya di development)
+    if os.environ.get("DEBUG_MODE") == "true":
+        with st.expander("Technical Details (for developers)"):
+            st.code(traceback.format_exc())
+
 
 # Tambahkan path ke utils
 sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
@@ -82,14 +109,24 @@ def load_rubric():
 def load_all_models():
     """Load semua model AI secara cached"""
     try:
+        # TAMBAHKAN progress indicator
+        progress_text = st.empty()
+        progress_text.text("🔄 Loading STT model...")
+        
         whisper_model = load_stt_model()
+        
+        progress_text.text("🔄 Loading text models...")
         spell_checker, english_words = load_text_models()
+        
+        progress_text.text("🔄 Loading embedder model...")
         embedder_model = load_embedder_model()
         
+        progress_text.empty()
         st.session_state.models_loaded = True
         return whisper_model, spell_checker, embedder_model, english_words
     except Exception as e:
         st.error(f"Error loading models: {str(e)}")
+        # Return fallback untuk mencegah crash
         return None, None, None, None
 
 # ==================== FUNGSI HELPER ====================
@@ -435,7 +472,11 @@ def show_question_ui(question_num, total_questions):
                 
             except Exception as e:
                 st.error(f"❌ Error processing response: {str(e)}")
-            
+                # TAMBAHKAN tombol retry
+                if st.button("🔄 Try Again", key=f"retry_{question_num}"):
+                    st.session_state.processing = False
+                    st.rerun()
+    
             finally:
                 st.session_state.processing = False
     
@@ -569,57 +610,53 @@ def show_final_report():
 
 # ==================== APLIKASI UTAMA ====================
 def main():
-    # Hide Streamlit default elements
-    hide_streamlit_style = """
-    <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    .stDeployButton {display:none;}
-    </style>
-    """
-    st.markdown(hide_streamlit_style, unsafe_allow_html=True)
-    
-    # Routing berdasarkan step
-    if st.session_state.current_step == 1:
-        show_landing_page()
-    
-    elif st.session_state.current_step == 2:
-        candidate_registration()
-    
-    elif st.session_state.current_step == 3:
-        questions = load_questions()
-        total_questions = len(questions)
-        show_question_ui(st.session_state.current_question, total_questions)
-    
-    elif st.session_state.current_step == 4:
-        show_final_report()
-    
-    # Sidebar info (optional)
-    with st.sidebar:
-        st.markdown("### Interview Status")
-        if st.session_state.current_step >= 2:
-            if 'name' in st.session_state.candidate_info:
-                st.info(f"**Candidate:** {st.session_state.candidate_info['name']}")
+    try:
+        # Hide Streamlit default elements
+        hide_streamlit_style = """
+        <style>
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
+        .stDeployButton {display:none;}
+        </style>
+        """
+        st.markdown(hide_streamlit_style, unsafe_allow_html=True)
         
-        if st.session_state.current_step == 3:
+        # Routing berdasarkan step
+        if st.session_state.current_step == 1:
+            show_landing_page()
+        
+        elif st.session_state.current_step == 2:
+            candidate_registration()
+        
+        elif st.session_state.current_step == 3:
             questions = load_questions()
-            total = len(questions)
-            current = st.session_state.current_question
-            st.progress(current / total)
-            st.caption(f"Question {current} of {total}")
+            total_questions = len(questions)
+            show_question_ui(st.session_state.current_question, total_questions)
         
-        if st.session_state.current_step == 4:
-            final_score = calculate_final_score()
-            st.metric("Final Score", f"{final_score:.1f}%")
+        elif st.session_state.current_step == 4:
+            show_final_report()
         
-        st.markdown("---")
-        st.caption("AI Interview Assessment v1.0")
-
-# ==================== RUN APLIKASI ====================
-if __name__ == "__main__":
-    # Ensure temp directory exists
-    create_temp_dir()
-    
-    # Run main app
-    main()
+        # Sidebar info (optional)
+        with st.sidebar:
+            st.markdown("### Interview Status")
+            if st.session_state.current_step >= 2:
+                if 'name' in st.session_state.candidate_info:
+                    st.info(f"**Candidate:** {st.session_state.candidate_info['name']}")
+            
+            if st.session_state.current_step == 3:
+                questions = load_questions()
+                total = len(questions)
+                current = st.session_state.current_question
+                st.progress(current / total)
+                st.caption(f"Question {current} of {total}")
+            
+            if st.session_state.current_step == 4:
+                final_score = calculate_final_score()
+                st.metric("Final Score", f"{final_score:.1f}%")
+            
+            st.markdown("---")
+            st.caption("AI Interview Assessment v1.0")
+            
+    except Exception as e:
+        handle_exception(e)  # Panggil fungsi error handler

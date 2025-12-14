@@ -1,3 +1,4 @@
+# PASTIKAN config.toml seperti ini:
 [theme]
 primaryColor = "#1E3A8A"
 backgroundColor = "#FFFFFF"
@@ -6,9 +7,10 @@ textColor = "#111827"
 font = "sans-serif"
 
 [server]
-maxUploadSize = 200
+maxUploadSize = 50  # REDUCE dari 200 ke 50 MB (limit Streamlit Cloud)
 enableCORS = false
 enableXsrfProtection = false
 
 [browser]
 gatherUsageStats = false
+serverAddress = "localhost"
