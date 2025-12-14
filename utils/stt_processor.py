@@ -44,15 +44,17 @@ FILLERS = ["umm", "uh", "uhh", "erm", "hmm", "eee", "emmm", "yeah", "ah", "okay"
 
 # --- MODEL CACHING ---
 def load_stt_model():
-    """Memuat Faster Whisper model."""
-    print(f"Loading WhisperModel ({WHISPER_MODEL_NAME}) on {DEVICE.upper()}")
-    return WhisperModel(WHISPER_MODEL_NAME, device=DEVICE, compute_type=COMPUTE_TYPE)
-
-def load_text_models():
-    """Memuat SpellChecker."""
-    spell = SpellChecker(language="en")
-    english_words = set(spell.word_frequency.words())
-    return spell, english_words
+    """Memuat Faster Whisper model tanpa torch GPU."""
+    try:
+        # Force CPU
+        import os
+        os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+        
+        from faster_whisper import WhisperModel
+        return WhisperModel("small", device="cpu", compute_type="int8")
+    except Exception as e:
+        print(f"Error loading WhisperModel: {e}")
+        return None
 
 # --- AUDIO UTILITIES ---
 def video_to_wav(input_video_path, output_wav_path, sr=SR_RATE):
